@@ -33,7 +33,7 @@ pub trait ContentAgent {
     // The agent constructor, it's parameters identify the agent
     fn new(name: String) -> Self;
 
-    async fn content_generator(&mut self, table: String) -> Result<Vec<TopicRecord>, AgentError>;
+    async fn content_generator(&mut self, table: String) -> Result<Vec<String>, AgentError>;
 }
 
 #[agent_definition]

@@ -133,6 +133,7 @@ dependencies = [
 name = "common-lib"
 version = "0.1.0"
 dependencies = [
+ "baml-client",
  "golem-rust",
  "serde",
  "serde_json",

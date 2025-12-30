@@ -1,4 +1,4 @@
-use common_lib::{AgentError, ContentAgent, TopicRecord};
+use common_lib::{AgentError, ContentAgent};
 use golem_rust::agent_implementation;
 
 use crate::{
@@ -12,9 +12,9 @@ impl ContentAgent for ContentImpl {
         Self { _name: name }
     }
 
-    async fn content_generator(&mut self, table: String) -> Result<Vec<TopicRecord>, AgentError> {
+    async fn content_generator(&mut self, table: String) -> Result<Vec<String>, AgentError> {
         let term_topics = fetch_rows(table.as_str()).await?;
-        let mut resp_vec: Vec<TopicRecord> = Vec::new();
+        let mut resp_vec: Vec<String> = Vec::new();
         for topic in &term_topics {
             let generated_content =
                 generate_lesson_with_baml(topic.clone())
@@ -36,7 +36,7 @@ impl ContentAgent for ContentImpl {
                     code: "CONTENT_DB_UPDATE_ERROR".to_string(),
                 })?;
             println!(
-                "term: {}, class: {}, subject: {}, topic: {} - generated and stored",
+                "term: {}, class: {}, subject: {}, topic: {} - generated and stored\n",
                 topic.term, topic.class, topic.subject, topic.topic
             );
             resp_vec.push(created_content);

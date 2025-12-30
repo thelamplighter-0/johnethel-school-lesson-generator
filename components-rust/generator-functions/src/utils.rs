@@ -28,7 +28,7 @@ impl From<&str> for ContentType {
 pub async fn create_row(
     input_row: CompleteLessonContent,
     source_id: String,
-) -> Result<TopicRecord, AgentError> {
+) -> Result<String, AgentError> {
     let mut json_string = serde_json::to_value(&input_row).map_err(|e| AgentError {
         message: format!("Error converting rust struct to value: {:?}", e),
         code: "STRUCT_TO_VALUE_ERROR".to_string(),
@@ -44,73 +44,32 @@ pub async fn create_row(
     // Remove quotes around source_id value in the JSON string
     let json_str = json_str.replace(
         &format!("\"source_id\":\"{}\"", source_id),
-        &format!("\"source_id\":{}", source_id),
+        &format!("\"source_id\": {}", source_id),
     );
 
     // SQL query
     let query = format!(
-        "USE NS main DB contents; CREATE lesson_content CONTENT {:?}",
+        "USE NS main DB contents; CREATE lesson_content CONTENT {};",
         json_str
     );
 
     let response = db_request(query).await?;
-    // Response structure:
-    // [0] = USE NS result (null)
-    // [1] = USE DB result (null)
-    // [2] = SELECT result (array of records)
-
-    println!("response: {:?}", response);
-    let records = if let Some(create_result) = response.get(0) {
-        // Check if query was successful
-        if let Some(status) = create_result.get("status") {
-            if status != "OK" {
-                return Err(AgentError {
-                    message: format!("Query failed with status: {:?}", status),
-                    code: "QUERY_FAILED".to_string(),
-                });
-            }
+    let create_result = response.get(1).unwrap();
+    // Check if query was successful
+    if let Some(status) = create_result.get("status") {
+        if status != "OK" {
+            return Err(AgentError {
+                message: format!("Query failed with status: {:?}", status),
+                code: "QUERY_FAILED".to_string(),
+            });
         }
-
-        // Get the result array
-        match create_result.get("result") {
-            Some(Value::Array(arr)) => {
-                if arr.is_empty() {
-                    return Err(AgentError {
-                        message: "Create returned empty result".to_string(),
-                        code: "EMPTY_RESULT".to_string(),
-                    });
-                }
-                // Deserialize the array of records
-                serde_json::from_value(arr[0].clone()).map_err(|e| AgentError {
-                    message: format!("Failed to deserialize records: {:?}", e),
-                    code: "DESERIALIZE_ERROR".to_string(),
-                })?
-            }
-            Some(other) => {
-                return Err(AgentError {
-                    message: format!("Unexpected result type: {:?}", other),
-                    code: "UNEXPECTED_RESULT".to_string(),
-                });
-            }
-            None => {
-                return Err(AgentError {
-                    message: "No 'result' field in response".to_string(),
-                    code: "MISSING_RESULT".to_string(),
-                });
-            }
-        }
-    } else {
-        return Err(AgentError {
-            message: format!(
-                "Expected at least 3 results, got {}",
-                response.len(),
-                // t.len()
-            ),
-            code: "INSUFFICIENT_RESULTS".to_string(),
-        });
-    };
-    println!("✓ Created Successfully {:?}", records);
-    Ok(records)
+    }
+    let response = format!(
+        "Successfully generated topic:: {} and subject:: {} for {}",
+        input_row.topic_title, input_row.subject, input_row.class_level
+    );
+    println!("✓ {}", response);
+    Ok(response)
 }
 
 pub async fn fetch_rows(table: &str) -> Result<Vec<TopicRecord>, AgentError> {
@@ -274,12 +233,9 @@ async fn generate_nigerian_lesson(
     let p_body_generate_nigerian_lesson_request = generate_nigerian_lesson_request;
     let uri_str = format!("{}/call/GenerateNigerianLesson", configuration.base_path);
 
-    println!("one");
-
     // Serialize the request body to JSON
     let body_json = serde_json::to_string(&p_body_generate_nigerian_lesson_request)
         .map_err(|e| Error::from(e))?;
-    println!("two");
 
     // Build the request
     let mut req_builder = Request::builder()
@@ -291,8 +247,6 @@ async fn generate_nigerian_lesson(
                 .map_err(|e| Error::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?,
         );
 
-    println!("three");
-
     // Add user agent if present
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(
@@ -302,13 +256,9 @@ async fn generate_nigerian_lesson(
         );
     }
 
-    println!("four");
-
     let req = req_builder
         .body(body_json.into_body())
         .map_err(|e| Error::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
-
-    println!("five");
 
     // Execute the request using wstd Client
     let response = Client::new()
@@ -316,59 +266,18 @@ async fn generate_nigerian_lesson(
         .await
         .map_err(|e| Error::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
-    println!("six");
-
     let status = response.status();
 
-    println!("six-a");
-    // // Get content type header value
-    // let content_type_header = response
-    //     .headers()
-    //     .get("content-type")
-    //     .and_then(|v| v.to_str().ok())
-    //     .unwrap_or("application/json");
-    // let content_type = ContentType::from(content_type_header);
-
-    println!("six-b");
     if !status.is_success() {
         return Err(Error::from(std::io::Error::new(
             std::io::ErrorKind::Other,
             status.to_string(),
         )));
     }
-    println!("six-c");
     let mut body = response.into_body();
-    println!("six-d");
     let response_json: CompleteLessonContent = body
         .json()
         .await
         .map_err(|e| Error::from(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
-    // let content = match content_type {
-    //     ContentType::Json => {
-    //         println!("seven");
-    //         body.json::<CompleteLessonContent>().await.map_err(|e| {
-    //             Error::from(serde_json::Error::io(std::io::Error::new(
-    //                 std::io::ErrorKind::Interrupted,
-    //                 "one kind error",
-    //             )))
-    //         })
-    //     }
-    //     ContentType::Text => {
-    //         println!("eight");
-    //         return Err(Error::from(serde_json::Error::io(std::io::Error::new(
-    //             std::io::ErrorKind::InvalidData,
-    //             "Received `text/plain` content type response that cannot be converted to `models::CompleteLessonContent`"
-    //         ))));
-    //     }
-    //     ContentType::Unsupported(unknown_type) => {
-    //         println!("nine");
-    //         return Err(Error::from(serde_json::Error::io(std::io::Error::new(
-    //             std::io::ErrorKind::InvalidData,
-    //             format!("Received `{}` content type response that cannot be converted to `models::CompleteLessonContent`", unknown_type)
-    //         ))));
-    //     }
-    // };
-
-    // let entity: CompleteLessonContent = serde_json::from_str(&content).unwrap();
     Ok(response_json)
 }
