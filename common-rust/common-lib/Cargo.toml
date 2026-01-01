@@ -7,4 +7,9 @@ edition = "2021"
 golem-rust = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-baml-client = {workspace = true}
+baml-client = { workspace = true }
+wstd = { workspace = true }
+typst = { workspace = true }
+typst-pdf = { workspace = true }
+typst-as-lib = { workspace = true }
+derive_typst_intoval = "0.6.0"

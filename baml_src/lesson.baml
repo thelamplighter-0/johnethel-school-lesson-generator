@@ -83,8 +83,8 @@ class CompleteLessonContent {
   key_points string[] @description("3-5 bullet-point summary statements")
 
   // Assessment Questions
-  mcq_questions MultipleChoiceQuestion[] @description("Exactly 5 questions, answers included for teachers")
-  theoretical_questions TheoreticalQuestion[] @description("Exactly 5 questions with model answers for teachers")
+  mcq_questions MultipleChoiceQuestion[] @description("Exactly 9 questions, answers included for teachers")
+  theoretical_questions TheoreticalQuestion[] @description("Exactly 9 questions with model answers for teachers")
 
   // Teacher-Specific Sections
   prior_knowledge string[] @description("What pupils should know + common misconceptions")
@@ -170,9 +170,9 @@ function GenerateNigerianLesson(
     - Bold only for headers/subtopics, not emphasis
 
     5. Question Requirements
-    - MCQs: Exactly 5, each 1 mark, culturally relevant distractors
+    - MCQs: Exactly 9, each 1 mark, culturally relevant distractors
     - Include correct_answer and explanation for each MCQ (teachers will see these)
-    - Theory: Exactly 5, each 5 marks total, parts (a), (b) if multi-part
+    - Theory: Exactly 9, each 5 marks total, parts (a), (b) if multi-part
     - Include model_answer and marking_scheme for each theory question (teachers will see these)
     - All questions must assess objectives directly
 

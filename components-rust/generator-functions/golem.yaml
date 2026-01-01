@@ -6,31 +6,50 @@
 # Field reference: https://learn.golem.cloud/app-manifest#field-reference
 # Creating HTTP APIs: https://learn.golem.cloud/invoke/making-custom-apis
 
-# httpApi:
-#     definitions:
-#         generator-functions-api:
-#             version: "0.0.1"
-#             routes:
-#                 - method: POST
-#                   path: /generator-functions-api/{name}/increment
-#                   binding:
-#                       type: default
-#                       componentName: generator:functions
-#                       response: |
-#                           let name: string = request.path.name;
-#                           let agent = counter-agent(name);
-#                           let new-value = agent.increment();
-#                           { status: 200, body: { result: "incremented ${name}, new value is ${new-value}" } }
+httpApi:
+    definitions:
+        generator-functions-api:
+            version: "0.0.1"
+            routes:
+                - method: GET
+                  path: /generate-pdf-api/{subject}/{class}/{mode}
+                  binding:
+                      type: default
+                      componentName: generator:functions
+                      response: |
+                          let subject: string = request.path.subject;
+                          let class: string = request.path.class;
+                          let mode: string = request.path.mode;
+                          let agent = pdf-agent("pdf-gen-${subject}-${class}");
+                          let pdf-result = agent.pdf-generator(subject, class, mode);
+                          {
+                              status: 200,
+                              headers: {
+                                  Content-Type: pdf-result.content-type,
+                                  Content-Disposition: "attachment; filename=${subject}-${class}-${mode}.pdf"
+                              },
+                              body: pdf-result.data
+                          }
 
-#     deployments:
-#         local:
-#             - domain: lesson-generator.localhost:9006
-#               definitions:
-#                   - generator-functions-api
+    deployments:
+        local:
+            - domain: lesson-generator.localhost:9006
+              definitions:
+                  - generator-functions-api
 
 components:
     generator:functions:
         templates: rust
+        files:
+            - sourcePath: ./files/template.typ
+              targetPath: /templates/template.typ
+              permissions: read-write
+            - sourcePath: ./files/times.ttf
+              targetPath: /fonts/times-new-roman.ttf
+              permissions: read-write
+            - sourcePath: ./files/watermark.png
+              targetPath: /templates/images/watermark.png
+              permissions: read-write
 
         # Component environment variables can reference system environment variables with minijinja syntax:
         #

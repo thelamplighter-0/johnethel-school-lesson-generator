@@ -1,10 +1,15 @@
+use common_lib::utils::{create_row, fetch_topics, generate_lesson_with_baml};
 use common_lib::{AgentError, ContentAgent};
 use golem_rust::agent_implementation;
+use wstd::task::sleep;
+use wstd::time::Duration;
 
-use crate::{
-    utils::{create_row, fetch_rows, generate_lesson_with_baml},
-    ContentImpl,
-};
+use crate::ContentImpl;
+
+// use crate::{
+//     utils::{create_row, fetch_topics, generate_lesson_with_baml},
+//     ContentImpl,
+// };
 
 #[agent_implementation]
 impl ContentAgent for ContentImpl {
@@ -13,7 +18,7 @@ impl ContentAgent for ContentImpl {
     }
 
     async fn content_generator(&mut self, table: String) -> Result<Vec<String>, AgentError> {
-        let term_topics = fetch_rows(table.as_str()).await?;
+        let term_topics = fetch_topics(table.as_str()).await?;
         let mut resp_vec: Vec<String> = Vec::new();
         for topic in &term_topics {
             let generated_content =
@@ -40,7 +45,20 @@ impl ContentAgent for ContentImpl {
                 topic.term, topic.class, topic.subject, topic.topic
             );
             resp_vec.push(created_content);
+
+            // Delay to avoid rate limiting
+            // 1.5 seconds = 40 requests/minute (safe for most providers)
+            sleep(Duration::from_millis(4000)).await;
         }
         Ok(resp_vec)
+    }
+
+    async fn test_sleep(&mut self) -> String {
+        let stats = ["first print", "second print", "third print"];
+        for statement in stats {
+            println!("{}", statement);
+            sleep(Duration::from_millis(3000)).await;
+        }
+        "Completed".to_string()
     }
 }

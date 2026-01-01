@@ -1,10 +1,9 @@
 mod agents_implementations;
-mod utils;
 
-pub struct PdfImpl {
+pub struct ContentImpl {
     _name: String,
 }
 
-pub struct ContentImpl {
+pub struct PdfImpl {
     _name: String,
 }

@@ -1,29 +1,13 @@
 use baml_client::apis::default_api::GenerateNigerianLessonError;
 use baml_client::apis::*;
 use baml_client::models::{ClassLevel, CompleteLessonContent, GenerateNigerianLessonRequest, Term};
-use common_lib::{AgentError, TopicRecord};
 use serde_json::Value;
 use wstd::http::body::IntoBody;
 use wstd::http::{Client, HeaderValue, Method, Request};
 
-#[allow(dead_code)]
-enum ContentType {
-    Json,
-    Text,
-    Unsupported(String),
-}
+use crate::{AgentError, TopicRecord};
 
-impl From<&str> for ContentType {
-    fn from(content_type: &str) -> Self {
-        if content_type.starts_with("application") && content_type.contains("json") {
-            return Self::Json;
-        } else if content_type.starts_with("text/plain") {
-            return Self::Text;
-        } else {
-            return Self::Unsupported(content_type.to_string());
-        }
-    }
-}
+pub mod pdf_engine;
 
 pub async fn create_row(
     input_row: CompleteLessonContent,
@@ -72,7 +56,7 @@ pub async fn create_row(
     Ok(response)
 }
 
-pub async fn fetch_rows(table: &str) -> Result<Vec<TopicRecord>, AgentError> {
+pub async fn fetch_topics(table: &str) -> Result<Vec<TopicRecord>, AgentError> {
     // SQL query
     let query = format!("USE NS main DB contents; SELECT * FROM {};", table);
     let response = db_request(query).await?;
@@ -131,6 +115,71 @@ pub async fn fetch_rows(table: &str) -> Result<Vec<TopicRecord>, AgentError> {
         });
     };
     println!("✓ Fetched {} records from {}", records.len(), table);
+    Ok(records)
+}
+
+pub async fn fetch_lessons(
+    subject: &str,
+    class: &str,
+) -> Result<Vec<CompleteLessonContent>, AgentError> {
+    // SQL query
+    let query = format!("USE NS main DB contents; SELECT * FROM lesson_content WHERE \"{}\" in class_level AND \"{}\" in subject ORDER BY term ASC, week ASC;", class, subject);
+    let response = db_request(query).await?;
+
+    // Response structure:
+    // [0] = USE NS result (null)
+    // [1] = USE DB result (null)
+    // [2] = SELECT result (array of records)
+
+    let records = if let Some(select_result) = response.get(1) {
+        // Check if query was successful
+        if let Some(status) = select_result.get("status") {
+            if status != "OK" {
+                return Err(AgentError {
+                    message: format!("Query failed with status: {:?}", status),
+                    code: "QUERY_FAILED".to_string(),
+                });
+            }
+        }
+
+        // Get the result array
+        match select_result.get("result") {
+            Some(Value::Array(arr)) => {
+                // Deserialize the array of records
+                serde_json::from_value(Value::Array(arr.clone())).map_err(|e| AgentError {
+                    message: format!("Failed to deserialize records: {:?}", e),
+                    code: "DESERIALIZE_ERROR".to_string(),
+                })?
+            }
+            Some(Value::Null) => {
+                // Table is empty or doesn't exist
+                println!("⚠️  Table is empty or doesn't exist");
+                Vec::new()
+            }
+            Some(other) => {
+                return Err(AgentError {
+                    message: format!("Unexpected result type: {:?}", other),
+                    code: "UNEXPECTED_RESULT".to_string(),
+                });
+            }
+            None => {
+                return Err(AgentError {
+                    message: "No 'result' field in response".to_string(),
+                    code: "MISSING_RESULT".to_string(),
+                });
+            }
+        }
+    } else {
+        return Err(AgentError {
+            message: format!(
+                "Expected at least 3 results, got {}",
+                response.len(),
+                // t.len()
+            ),
+            code: "INSUFFICIENT_RESULTS".to_string(),
+        });
+    };
+    println!("✓ Fetched {} records from db", records.len());
     Ok(records)
 }
 
