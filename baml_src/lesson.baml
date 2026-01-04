@@ -10,6 +10,9 @@ enum ClassLevel {
   PRIMARY_3
   PRIMARY_4
   PRIMARY_5
+  JSS_1
+  JSS_2
+  JSS_3
 }
 
 enum Term {
@@ -112,7 +115,8 @@ function GenerateNigerianLesson(
   term: Term,
   week: int,
   topic: string,
-  age_group: string
+  age_group: string,
+  context: string?
 ) -> CompleteLessonContent {
   client MainClient
 
@@ -127,6 +131,7 @@ function GenerateNigerianLesson(
     - Week: {{ week }}
     - Topic: {{ topic }}
     - Age Group: {{ age_group }}
+    - Additional Context Info: {{ context }}
 
     CRITICAL REQUIREMENTS
 
@@ -151,6 +156,15 @@ function GenerateNigerianLesson(
     - Example: "Photosynthesis is the process plants use to make food. Chlorophyll in leaves captures sunlight energy."
     {% elif class_level == ClassLevel.PRIMARY_5 %}
     - Age 9-10: Complex sentences, advanced vocabulary, abstract reasoning
+    - Example: "Photosynthesis converts light energy into chemical energy stored in glucose molecules, releasing oxygen as a byproduct."
+    {% elif class_level == ClassLevel.JSS_1 %}
+    - Age 10-11: Complex sentences, advanced vocabulary, abstract reasoning
+    - Example: "Photosynthesis converts light energy into chemical energy stored in glucose molecules, releasing oxygen as a byproduct."
+    {% elif class_level == ClassLevel.JSS_2 %}
+    - Age 11-12: Complex sentences, advanced vocabulary, abstract reasoning
+    - Example: "Photosynthesis converts light energy into chemical energy stored in glucose molecules, releasing oxygen as a byproduct."
+    {% elif class_level == ClassLevel.JSS_3 %}
+    - Age 12-13: Complex sentences, advanced vocabulary, abstract reasoning
     - Example: "Photosynthesis converts light energy into chemical energy stored in glucose molecules, releasing oxygen as a byproduct."
     {% endif %}
 

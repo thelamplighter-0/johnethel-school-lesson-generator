@@ -1,7 +1,4 @@
-use baml_client::models::{
-    self, ClassLevel, CompleteLessonContent, ContentSection, ContentSubPoint, ContentSubPointText,
-    LessonObjective, LessonStep, MultipleChoiceQuestion, Term, TheoreticalQuestion,
-};
+use baml_client::models::{ClassLevel, CompleteLessonContent, ContentSubPointText, Term};
 use derive_typst_intoval::{IntoDict, IntoValue};
 use std::fs;
 use typst::foundations::{Bytes, Dict, IntoValue};
@@ -12,7 +9,6 @@ use crate::AgentError;
 // File paths - these should be in your Golem agent's filesystem
 static TEMPLATE_PATH: &str = "/templates/template.typ";
 static FONT_PATH: &str = "/fonts/times-new-roman.ttf";
-static OUTPUT_PATH: &str = "/output/lesson_manual.pdf";
 static WATERMARK_PATH: &str = "/templates/images/watermark.png";
 
 pub fn pdf_engine(
@@ -34,7 +30,10 @@ pub fn pdf_engine(
     })?;
 
     // Read watermark image at runtime
-    let watermark_bytes = fs::read(WATERMARK_PATH).ok(); // Optional, so use .ok()
+    let watermark_bytes = fs::read(WATERMARK_PATH).map_err(|e| AgentError {
+        message: format!("Could not read watermark image: {}", e),
+        code: "IMAGE_READ_ERROR".to_string(),
+    })?; // Optional, so use .ok()
 
     // Build the typst engine with the template and fonts
     let template = TypstEngine::builder()
@@ -57,7 +56,7 @@ pub fn pdf_engine(
         class_year: class_str.to_string(),
         mode: mode.to_string(),
         lessons: lessons.into_iter().map(|l| l.into()).collect(),
-        watermark_image: watermark_bytes.map(|bytes| Bytes::new(bytes)),
+        watermark_image: Some(Bytes::new(watermark_bytes)),
     };
 
     // Compile the template
@@ -83,10 +82,10 @@ pub fn pdf_engine(
     // })?;
 
     // Write to file (optional - for debugging/caching)
-    if let Err(e) = fs::write(OUTPUT_PATH, &pdf) {
-        // Just log the error, don't fail if we can't write
-        eprintln!("Warning: Could not write PDF to {}: {}", OUTPUT_PATH, e);
-    }
+    // if let Err(e) = fs::write(OUTPUT_PATH, &pdf) {
+    //     // Just log the error, don't fail if we can't write
+    //     eprintln!("Warning: Could not write PDF to {}: {}", OUTPUT_PATH, e);
+    // }
 
     Ok(pdf)
 }
@@ -198,6 +197,9 @@ fn class_level_to_string(level: ClassLevel) -> String {
         ClassLevel::Primary3 => "PRIMARY_3".to_string(),
         ClassLevel::Primary4 => "PRIMARY_4".to_string(),
         ClassLevel::Primary5 => "PRIMARY_5".to_string(),
+        ClassLevel::Jss1 => "JSS_1".to_string(),
+        ClassLevel::Jss2 => "JSS_2".to_string(),
+        ClassLevel::Jss3 => "JSS_3".to_string(),
     }
 }
 

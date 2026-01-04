@@ -22,12 +22,25 @@
   set text(font: "Times New Roman", size: 12pt)
   set par(justify: true)
 
+  // Overlay function
+  let overlay(img, color) = layout(bounds => {
+    let size = measure(img, ..bounds)
+    img
+    place(center + horizon, block(..size, fill: color))
+  })
+
   set page(
     paper: "a4",
     margin: (x: 0.8in, y: 1in),
     background: context {
       if watermark_image != none {
-        place(center + horizon, rotate(-45deg, image(watermark_image, width: 80%, opacity: 10%)))
+        // place(center + center,
+        //   block(
+        //     fill: white.transparentize(100%),
+        //     image(watermark_image, width: 80%),
+        //   )
+        // )
+        overlay(image(watermark_image, width: 80%), white.transparentize(5%))
       } else {
         place(center + horizon, rotate(-45deg, text(100pt, fill: gray.lighten(85%), weight: "bold")[JOHNETHEL]))
       }
@@ -36,7 +49,7 @@
 
   // 2. HELPER: FULL-PAGE RULED LINES
   let full_page_lines(title: none) = context {
-    pagebreak(weak: true)
+    // pagebreak(weak: true)
     if title != none {
       align(center, heading(level: 2, outlined: false)[#upper(title)]); linebreak()
       v(0.5em)
@@ -124,7 +137,8 @@
     #upper(subject) (YEAR #year) \ \ \ \
     #text(12pt)[No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of Johnethel School, except in the case of brief quotations embodied in critical reviews and certain other non-commercial uses permitted by copyright law.] \ \ \
     #text(12pt)[*Published by:* Johnethel School \
-    *First Edition:* 2025
+      *First Edition:* 2025 \
+      *Second Edition:* 2026
     ] \ \ \ \
     #text(12pt)[For permission requests, write to: Johnethel School \
     Address: Omolabake House, beside Town Planning Office, Oke Anu, 		     Ogbomoso, Oyo State, Nigeria
@@ -186,7 +200,7 @@
       block(width: 100%, stroke: (bottom: 0.5pt), inset: (bottom: 8pt))[
         #set text(size: 10pt, weight: "bold")
         #if header_image != none { image(header_image, width: 100%); v(-0.5em) }
-        JOHNETHEL #upper(subject) MANUAL (Year #year) #h(1fr) #text(style: "italic")[Grooming Future Leaders]
+        JOHNETHEL #upper(subject) MANUAL (Year #year) #h(1fr) #text(style: "italic")[Grooming Future Leaders for Excellence]
       ]
     },
     footer: context { align(center, text(10pt)[#counter(page).display("1")]) }
@@ -350,39 +364,132 @@
       full_page_lines(title: last_term + " TERM: CA TEST " + str(n + 1))
     }
   }
+
+  // let question_bank_last_term = none
+  // heading(level: 2)[EXAM QUESTIONS BANK]
+  // heading(level: 3)[REVISION QUESTIONS (Multiple Choice)]
+  // let objective_q_number = 1
+  // for lesson in lessons {
+  //   // term separator
+  //   if lesson.term != question_bank_last_term {
+  //     heading(level: 3)[#lesson.term]
+  //     question_bank_last_term = lesson.term
+  //   }
+  //   if mode == "teacher" {
+  //     if lesson.mcq_questions.len() > 0 {
+  //       let index = 0
+  //       for q in lesson.mcq_questions {
+  //         if index < 5 {
+  //           index += 1
+  //           continue
+  //         }
+  //         [#objective_q_number. #q.question ]
+  //         [(a) #q.option_a (b) #q.option_b (c) #q.option_c]
+  //         text(fill: blue, weight: "bold")[ [Ans: #q.correct_answer] \ Explanation: #q.explanation]
+  //         v(0.5em)
+  //         index += 1
+  //         objective_q_number += 1
+  //       }
+  //     }
+  //   }
+  // }
+
+  // heading(level: 3)[THEORETICAL QUESTIONS]
+  // let essay_q_number = 1
+  // for lesson in lessons {
+  //   if mode == "teacher" {
+  //     if lesson.theoretical_questions.len() > 0 {
+  //       let index = 0
+  //       for q in lesson.theoretical_questions {
+  //         if index < 5 {
+  //           index += 1
+  //           continue
+  //         }
+  //         [#q_number. #q.question \ ]
+  //         for part in q.parts {
+  //           [#part ]; linebreak()
+  //         }
+  //         // [(a) #q.option_a (b) #q.option_b (c) #q.option_c]
+  //         if mode == "teacher" { text(fill: blue, weight: "bold")[ Ans:\  #q.model_answer] }
+  //         v(0.5em)
+  //         index += 1
+  //         essay_q_number += 1
+  //       }
+  //     }
+  //   }
+  // }
+  //
   if mode == "teacher" {
+    let question_bank_last_term = none
     heading(level: 2)[EXAM QUESTIONS BANK]
-    heading(level: 3)[REVISION QUESTIONS (Multiple Choice)]
+
+    // Get unique terms in order
+    let terms = ()
     for lesson in lessons {
-      if lesson.mcq_questions.len() > 0 {
-      let q_count = 1
-      for q in lesson.mcq_questions {
-        if q_count < 6 {
-          continue
-        }
-        [#q_count. #q.question ]
-        [(a) #q.option_a (b) #q.option_b (c) #q.option_c]
-        text(fill: blue, weight: "bold")[ [Ans: #q.correct_answer] \ Explanation: #q.explanation] }
-        v(0.5em)
-        q_count += 1
+      if not terms.contains(lesson.term) {
+        terms.push(lesson.term)
       }
     }
-    heading(level: 3)[THEORETICAL QUESTIONS]
-    for lesson in lessons {
-      if lesson.theoretical_questions.len() > 0 {
-        let q_count = 1
-        for q in lesson.theoretical_questions {
-          if q_count < 6 {
-            continue
+
+    // Process each term
+    for term in terms {
+      // Term heading
+      heading(level: 3)[#term TERM]
+
+      // Revision Questions section for this term
+      heading(level: 4)[REVISION QUESTIONS (Multiple Choice)]
+      let objective_q_number = 1
+
+      for lesson in lessons {
+        if lesson.term == term {
+          if mode == "teacher" {
+            if lesson.mcq_questions.len() > 0 {
+              let index = 0
+              for q in lesson.mcq_questions {
+                if index < 5 {
+                  index += 1
+                  continue
+                }
+                [#objective_q_number. #q.question ]
+                [(a) #q.option_a (b) #q.option_b (c) #q.option_c]
+                text(fill: blue, weight: "bold")[ [Ans: #q.correct_answer] \ Explanation: #q.explanation]
+                v(0.5em)
+                index += 1
+                objective_q_number += 1
+              }
+            }
           }
-          [#q_count. #q.question \ ]
-          for part in q.parts {
-            [#part ]; linebreak()
+        }
+      }
+
+      // Theoretical Questions section for this term
+      heading(level: 4)[THEORETICAL QUESTIONS]
+      let essay_q_number = 1
+
+      for lesson in lessons {
+        if lesson.term == term {
+          if mode == "teacher" {
+            if lesson.theoretical_questions.len() > 0 {
+              let index = 0
+              for q in lesson.theoretical_questions {
+                if index < 5 {
+                  index += 1
+                  continue
+                }
+                if index >= 6 {
+                  break
+                }
+                [#essay_q_number. #q.question \ ]
+                for part in q.parts {
+                  [#part ]; linebreak()
+                }
+                text(fill: blue, weight: "bold")[ Ans:\  #q.model_answer]
+                v(0.5em)
+                index += 1
+                essay_q_number += 1
+              }
+            }
           }
-          // [(a) #q.option_a (b) #q.option_b (c) #q.option_c]
-          if mode == "teacher" { text(fill: blue, weight: "bold")[ Ans:\  #q.model_answer] }
-          v(0.5em)
-          q_count += 1
         }
       }
     }
@@ -396,5 +503,5 @@
   mode: mode,
   lessons: dummy_lessons,
   header_image: none,
-  watermark_image: none
+  watermark_image: watermark_image
 )
