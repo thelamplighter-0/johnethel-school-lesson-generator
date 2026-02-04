@@ -26,6 +26,7 @@ pub struct TopicRecord {
     pub term: String,
     pub topic: String,
     pub week: i32, // Note: week is a number, not a string
+    pub context: Option<String>,
 }
 
 impl From<String> for AgentError {

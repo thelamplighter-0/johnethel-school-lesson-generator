@@ -33,7 +33,7 @@ pub async fn create_row(
 
     // SQL query
     let query = format!(
-        "USE NS main DB contents; CREATE lesson_content CONTENT {};",
+        "USE NS main DB `johnethel-school-generated-lessons`; CREATE lesson_content CONTENT {};",
         json_str
     );
 
@@ -58,7 +58,10 @@ pub async fn create_row(
 
 pub async fn fetch_topics(table: &str) -> Result<Vec<TopicRecord>, AgentError> {
     // SQL query
-    let query = format!("USE NS main DB contents; SELECT * FROM {};", table);
+    let query = format!(
+        "USE NS main DB `johnethel-school-generated-lessons`; SELECT * FROM {};",
+        table
+    );
     let response = db_request(query).await?;
 
     // Response structure:
@@ -123,7 +126,7 @@ pub async fn fetch_lessons(
     class: &str,
 ) -> Result<Vec<CompleteLessonContent>, AgentError> {
     // SQL query
-    let query = format!("USE NS main DB contents; SELECT * FROM lesson_content WHERE \"{}\" in class_level AND \"{}\" in subject ORDER BY term ASC, week ASC;", class, subject);
+    let query = format!("USE NS main DB `johnethel-school-generated-lessons`; SELECT * FROM lesson_content WHERE \"{}\" in class_level AND \"{}\" in subject ORDER BY term ASC, week ASC;", class, subject);
     let response = db_request(query).await?;
 
     // Response structure:
@@ -185,10 +188,14 @@ pub async fn fetch_lessons(
 
 async fn db_request(query: String) -> Result<Vec<Value>, AgentError> {
     // SurrealDB REST API endpoint
-    let url = "http://localhost:8000/sql";
+    // let url = "http://localhost:8000/sql";
+    let url = std::env::var("SURREAL_DB_URL").map_err(|_| AgentError {
+        message: "Unable to fetch env for surreal url".to_string(),
+        code: "SURREAL_DB_ENV_ERROR".to_string(),
+    })?;
 
     // Build HTTP request
-    let request = Request::post(url)
+    let request = Request::post(url.as_str())
         .header(
             "Accept",
             HeaderValue::from_str("application/json").map_err(|e| e.to_string())?,
@@ -248,6 +255,9 @@ fn convert_from_topic_record_to_baml_format(input: TopicRecord) -> GenerateNiger
         "Year 3" => Ok(ClassLevel::Primary3),
         "Year 4" => Ok(ClassLevel::Primary4),
         "Year 5" => Ok(ClassLevel::Primary5),
+        "Jss 1" => Ok(ClassLevel::Jss1),
+        "Jss 2" => Ok(ClassLevel::Jss2),
+        "Jss 3" => Ok(ClassLevel::Jss3),
         _ => Err(AgentError {
             message: format!("Invalid class level: {}", input.class),
             code: "INVALID_CLASS_LEVEL".to_string(),
@@ -271,6 +281,7 @@ fn convert_from_topic_record_to_baml_format(input: TopicRecord) -> GenerateNiger
         term: term.unwrap(),
         topic: input.topic,
         week: input.week,
+        context: input.context,
         __baml_options__: None,
     }
 }
